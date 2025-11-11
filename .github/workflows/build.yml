@@ -25,6 +25,25 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
+      # 👇 Install Android SDK, NDK, and CMake properly
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 11076708
+          packages: |
+            platforms;android-34
+            platform-tools
+            build-tools;34.0.0
+            cmake;3.22.1
+            ndk;27.1.12297006
+
+      # 👇 (Optional but helps speed)
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: RoomAllotment/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('RoomAllotment/package-lock.json') }}
+
       - name: Install dependencies
         run: |
           cd RoomAllotment
@@ -36,7 +55,7 @@ jobs:
         run: |
           cd RoomAllotment/android
           ./gradlew clean
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
