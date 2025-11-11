@@ -1,5 +1,5 @@
 name: React Native CI/CD
-on: 
+on:
   push:
     branches: [ main ]
   pull_request:
@@ -17,45 +17,39 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 16
 
+      # ✅ Setup Java (required for Gradle)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
 
-      # 👇 Install Android SDK, NDK, and CMake properly
+      # ✅ Install Android SDK properly
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 11076708
-          packages: |
-            platforms;android-34
-            platform-tools
-            build-tools;34.0.0
-            cmake;3.22.1
-            ndk;27.1.12297006
-
-      # 👇 (Optional but helps speed)
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: RoomAllotment/node_modules
-          key: ${{ runner.os }}-modules-${{ hashFiles('RoomAllotment/package-lock.json') }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget tar unzip
+          ANDROID_HOME=$HOME/android-sdk
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd "$ANDROID_HOME/cmdline-tools"
+          wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
+          unzip sdk-tools.zip -d latest
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install dependencies
         run: |
           cd RoomAllotment
           npm install
-          npx react-native config
           cd android && chmod +x gradlew
 
       - name: Build Android Release APK
         run: |
           cd RoomAllotment/android
-          ./gradlew clean
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
