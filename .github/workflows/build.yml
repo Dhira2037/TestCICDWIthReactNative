@@ -10,6 +10,10 @@ jobs:
     name: Android Build
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/android-sdk
+      PATH: ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:${{ github.workspace }}/android-sdk/build-tools/34.0.0:${{ github.workspace }}/android-sdk/emulator:${{ env.PATH }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,26 +23,24 @@ jobs:
         with:
           node-version: 16
 
-      # ✅ Setup Java (required for Gradle)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
 
-      # ✅ Install Android SDK properly
-      - name: Setup Android SDK
+      # ✅ Properly install Android SDK & add to PATH
+      - name: Install Android SDK
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget tar unzip
-          ANDROID_HOME=$HOME/android-sdk
-          mkdir -p "$ANDROID_HOME/cmdline-tools"
-          cd "$ANDROID_HOME/cmdline-tools"
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
           unzip sdk-tools.zip -d latest
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          echo "✅ Installed Android commandline tools"
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "✅ Installed SDK components"
 
       - name: Install dependencies
         run: |
