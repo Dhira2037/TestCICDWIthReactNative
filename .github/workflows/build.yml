@@ -26,41 +26,45 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      # ✅ Install Android SDK properly
       - name: Install Android SDK
         run: |
           set -e
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
           cd $ANDROID_SDK_ROOT/cmdline-tools
-          echo "📦 Downloading Android SDK command-line tools..."
           wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
           unzip -q sdk-tools.zip
           mv cmdline-tools latest
-          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
-          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "✅ Installed commandline tools at $ANDROID_SDK_ROOT"
 
       - name: Accept SDK Licenses and Install Platforms
         run: |
           export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
           yes | sdkmanager --licenses || true
-          sdkmanager --install "platform-tools" "build-tools;34.0.0" "platforms;android-34"
-          echo "✅ Android SDK setup complete"
+          sdkmanager --install "platform-tools" "build-tools;35.0.0" "platforms;android-35"
 
       - name: Install Dependencies
         run: |
           cd RoomAllotment
-          npm install
+          npm ci
+          npx react-native config > /dev/null || true
           cd android
           chmod +x gradlew
+
+      - name: Verify Autolinking
+        run: |
+          cd RoomAllotment
+          echo "Checking autolinking.json"
+          npx react-native config > android/build/generated/autolinking/autolinking.json
+          cat android/build/generated/autolinking/autolinking.json | head -n 10
 
       - name: Build Android Release APK
         run: |
           cd RoomAllotment/android
           export ANDROID_HOME=$ANDROID_SDK_ROOT
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/34.0.0
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/35.0.0
+          ./gradlew clean
           ./gradlew assembleRelease --stacktrace --no-daemon
 
       - name: Upload Artifact
