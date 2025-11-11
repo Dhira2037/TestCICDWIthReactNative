@@ -1,4 +1,5 @@
 name: React Native CI/CD
+
 on: 
   push:
     branches: [ main ]
@@ -11,29 +12,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Node (React Native 0.68 works best with Node 16)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 16
 
+      # 3️⃣ Setup Java (React Native 0.68 needs Java 11)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 11
+
+      # 4️⃣ Install npm dependencies
       - name: Install dependencies
         run: |
           cd RoomAllotment
           npm install
           cd android && chmod +x gradlew
 
-      - name: Build Android Release APK
+      # 5️⃣ Generate autolinking config
+      - name: Generate autolinking config
         run: |
           cd RoomAllotment
-          cd android
-          ./gradlew assembleRelease
+          npx react-native config
 
+      # 6️⃣ Decode Keystore from GitHub Secret
+      - name: Decode keystore
+        run: |
+          cd RoomAllotment
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      # 7️⃣ Clean old builds
+      - name: Clean Android build
+        run: |
+          cd RoomAllotment/android
+          ./gradlew clean
+
+      # 8️⃣ Build release APK (signed)
+      - name: Build Android Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cd RoomAllotment/android
+          ./gradlew assembleRelease --stacktrace
+
+      # 9️⃣ Upload the generated APK as artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
-    
+          path: RoomAllotment/android/app/build/outputs/apk/release/app-release.apk
