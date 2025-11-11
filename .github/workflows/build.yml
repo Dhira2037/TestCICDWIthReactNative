@@ -1,5 +1,4 @@
 name: React Native CI/CD
-
 on: 
   push:
     branches: [ main ]
@@ -12,61 +11,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Node (for React Native 0.68)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
-      # 3️⃣ Setup Java 17 (required by Gradle 8+)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
 
-      # 4️⃣ Install dependencies
       - name: Install dependencies
         run: |
           cd RoomAllotment
           npm install
+          npx react-native config
           cd android && chmod +x gradlew
 
-      # 5️⃣ Generate autolinking config
-      - name: Generate autolinking config
-        run: |
-          cd RoomAllotment
-          npx react-native config
-
-      # 6️⃣ Decode Keystore
-      - name: Decode keystore
-        run: |
-          cd RoomAllotment
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-
-      # 7️⃣ Clean previous builds
-      - name: Clean Android build
+      - name: Build Android Release APK
         run: |
           cd RoomAllotment/android
           ./gradlew clean
+          ./gradlew assembleRelease
 
-      # 8️⃣ Build release APK
-      - name: Build Android Release APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          cd RoomAllotment/android
-          ./gradlew assembleRelease --stacktrace
-
-      # 9️⃣ Upload artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
