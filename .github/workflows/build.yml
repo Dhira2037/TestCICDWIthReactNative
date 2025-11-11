@@ -27,6 +27,7 @@ jobs:
 
       - name: Build Android Release APK
         run: |
+          cd RoomAllotment
           cd android
           ./gradlew assembleRelease
 
