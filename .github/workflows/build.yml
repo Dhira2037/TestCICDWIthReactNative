@@ -12,7 +12,6 @@ jobs:
 
     env:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
-      PATH: ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:${{ github.workspace }}/android-sdk/build-tools/34.0.0:${{ github.workspace }}/android-sdk/emulator:${{ env.PATH }}
 
     steps:
       - name: Checkout code
@@ -29,13 +28,13 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      # ✅ Properly install Android SDK & add to PATH
+      # ✅ Install Android SDK and tools
       - name: Install Android SDK
         run: |
           mkdir -p $ANDROID_HOME/cmdline-tools
           cd $ANDROID_HOME/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
-          unzip sdk-tools.zip -d latest
+          unzip -q sdk-tools.zip -d latest
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
           echo "✅ Installed Android commandline tools"
           yes | sdkmanager --licenses
@@ -51,6 +50,8 @@ jobs:
       - name: Build Android Release APK
         run: |
           cd RoomAllotment/android
+          export ANDROID_HOME=${{ github.workspace }}/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/34.0.0
           ./gradlew assembleRelease
 
       - name: Upload Artifact
