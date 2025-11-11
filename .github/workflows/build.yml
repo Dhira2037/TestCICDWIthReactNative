@@ -16,20 +16,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Node (React Native 0.68 works best with Node 16)
+      # 2️⃣ Setup Node (for React Native 0.68)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 16
 
-      # 3️⃣ Setup Java (React Native 0.68 needs Java 11)
+      # 3️⃣ Setup Java 17 (required by Gradle 8+)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 11
+          java-version: 17
 
-      # 4️⃣ Install npm dependencies
+      # 4️⃣ Install dependencies
       - name: Install dependencies
         run: |
           cd RoomAllotment
@@ -42,7 +42,7 @@ jobs:
           cd RoomAllotment
           npx react-native config
 
-      # 6️⃣ Decode Keystore from GitHub Secret
+      # 6️⃣ Decode Keystore
       - name: Decode keystore
         run: |
           cd RoomAllotment
@@ -50,13 +50,13 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
-      # 7️⃣ Clean old builds
+      # 7️⃣ Clean previous builds
       - name: Clean Android build
         run: |
           cd RoomAllotment/android
           ./gradlew clean
 
-      # 8️⃣ Build release APK (signed)
+      # 8️⃣ Build release APK
       - name: Build Android Release APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -66,7 +66,7 @@ jobs:
           cd RoomAllotment/android
           ./gradlew assembleRelease --stacktrace
 
-      # 9️⃣ Upload the generated APK as artifact
+      # 9️⃣ Upload artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
