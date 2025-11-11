@@ -1,4 +1,5 @@
 name: React Native CI/CD
+
 on:
   push:
     branches: [ main ]
@@ -9,9 +10,6 @@ jobs:
   build-android:
     name: Android Build
     runs-on: ubuntu-latest
-
-    env:
-      ANDROID_HOME: ${{ github.workspace }}/android-sdk
 
     steps:
       - name: Checkout code
@@ -28,31 +26,42 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      # ✅ Install Android SDK and tools
+      # ✅ Install Android SDK properly
       - name: Install Android SDK
         run: |
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
+          set -e
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          cd $ANDROID_SDK_ROOT/cmdline-tools
+          echo "📦 Downloading Android SDK command-line tools..."
           wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
-          unzip -q sdk-tools.zip -d latest
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          echo "✅ Installed Android commandline tools"
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          echo "✅ Installed SDK components"
+          unzip -q sdk-tools.zip
+          mv cmdline-tools latest
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "✅ Installed commandline tools at $ANDROID_SDK_ROOT"
 
-      - name: Install dependencies
+      - name: Accept SDK Licenses and Install Platforms
+        run: |
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+          echo "✅ Android SDK setup complete"
+
+      - name: Install Dependencies
         run: |
           cd RoomAllotment
           npm install
-          cd android && chmod +x gradlew
+          cd android
+          chmod +x gradlew
 
       - name: Build Android Release APK
         run: |
           cd RoomAllotment/android
-          export ANDROID_HOME=${{ github.workspace }}/android-sdk
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/34.0.0
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --stacktrace --no-daemon
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
