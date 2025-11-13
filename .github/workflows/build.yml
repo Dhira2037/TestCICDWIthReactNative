@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18   # React Native 0.75+ works best with Node 18
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -35,38 +35,38 @@ jobs:
           wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
           unzip -q sdk-tools.zip
           mv cmdline-tools latest
-          echo "PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_ENV
 
       - name: Accept SDK Licenses and Install Platforms
         run: |
           export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
           yes | sdkmanager --licenses || true
-          sdkmanager --install "platform-tools" "build-tools;35.0.0" "platforms;android-35"
+          sdkmanager --install "platform-tools" "build-tools;35.0.0" "platforms;android-35" "ndk;27.1.12297006"
 
       - name: Install Dependencies
         run: |
           cd RoomAllotment
           npm ci
-          npx react-native config > /dev/null || true
           cd android
           chmod +x gradlew
 
-      - name: Verify Autolinking
+      - name: Prepare Autolinking
         run: |
-            cd RoomAllotment
-            mkdir -p android/build/generated/autolinking
-            echo "Generating autolinking.json..."
-            npx react-native config > android/build/generated/autolinking/autolinking.json
-            echo "autolinking.json created. Preview below:"
-            head -n 20 android/build/generated/autolinking/autolinking.json
-
+          cd RoomAllotment
+          mkdir -p android/build/generated/autolinking
+          echo "Generating autolinking.json..."
+          npx react-native config > android/build/generated/autolinking/autolinking.json
+          echo "autolinking.json created successfully ✅"
+          head -n 20 android/build/generated/autolinking/autolinking.json
 
       - name: Build Android Release APK
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          PATH: ${{ env.PATH }}:${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:${{ env.ANDROID_SDK_ROOT }}/build-tools/35.0.0
         run: |
           cd RoomAllotment/android
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/35.0.0
           ./gradlew clean
           ./gradlew assembleRelease --stacktrace --no-daemon
 
