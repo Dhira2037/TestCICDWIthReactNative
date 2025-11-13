@@ -53,7 +53,7 @@ jobs:
           chmod +x gradlew
 
       - name: Verify Autolinking
-          run: |
+        run: |
             cd RoomAllotment
             mkdir -p android/build/generated/autolinking
             echo "Generating autolinking.json..."
