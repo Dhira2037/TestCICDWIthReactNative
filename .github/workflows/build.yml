@@ -53,11 +53,14 @@ jobs:
           chmod +x gradlew
 
       - name: Verify Autolinking
-        run: |
-          cd RoomAllotment
-          echo "Checking autolinking.json"
-          npx react-native config > android/build/generated/autolinking/autolinking.json
-          cat android/build/generated/autolinking/autolinking.json | head -n 10
+          run: |
+            cd RoomAllotment
+            mkdir -p android/build/generated/autolinking
+            echo "Generating autolinking.json..."
+            npx react-native config > android/build/generated/autolinking/autolinking.json
+            echo "autolinking.json created. Preview below:"
+            head -n 20 android/build/generated/autolinking/autolinking.json
+
 
       - name: Build Android Release APK
         run: |
