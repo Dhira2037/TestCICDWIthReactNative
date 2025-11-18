@@ -69,15 +69,19 @@ jobs:
       # ---------------------------
       # 🔥 FIX: AUTOLINKING + CODEGEN
       # ---------------------------
-      - name: Prepare Autolinking + Run Codegen
+      - name: Prepare Autolinking + Codegen (Android Only)
         run: |
           cd RoomAllotment
-          echo "Preparing Autolinking & Codegen..."
+          echo "Preparing Android Autolinking & Codegen..."  
+          # Autolinking fix
           mkdir -p android/build/generated/autolinking
           npx react-native config > android/build/generated/autolinking/autolinking.json
-          npx react-native codegen
-          echo "Autolinking + Codegen completed successfully ✔️"
+      
+          # 🔥 FIX: Run only Android codegen to avoid CI crash
+          npx react-native codegen --platform android
+          echo "Android Codegen Completed ✔️"
           head -n 30 android/build/generated/autolinking/autolinking.json
+
 
       # ---------------------------
       # BUILD RELEASE APK
