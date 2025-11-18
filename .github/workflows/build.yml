@@ -1,0 +1,109 @@
+name: React Native CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-android:
+    name: Android Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # ---------------------------
+      # CHECKOUT
+      # ---------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ---------------------------
+      # NODE
+      # ---------------------------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # ---------------------------
+      # JAVA
+      # ---------------------------
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      # ---------------------------
+      # ANDROID SDK
+      # ---------------------------
+      - name: Install Android SDK
+        run: |
+          set -e
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          cd $ANDROID_SDK_ROOT/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
+          unzip -q sdk-tools.zip
+          mv cmdline-tools latest
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_ENV
+
+      - name: Accept SDK Licenses & Install Platforms
+        run: |
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "platform-tools" "build-tools;35.0.0" "platforms;android-35" "ndk;27.1.12297006"
+
+      # ---------------------------
+      # INSTALL DEPENDENCIES
+      # ---------------------------
+      - name: Install npm packages
+        run: |
+          cd RoomAllotment
+          npm ci
+          cd android
+          chmod +x gradlew
+
+      # ---------------------------
+      # 🔥 FIX: AUTOLINKING + CODEGEN
+      # ---------------------------
+      - name: Prepare Autolinking + Codegen (Android Only)
+        run: |
+          cd RoomAllotment
+          echo "Preparing Android Autolinking & Codegen..."  
+          # Autolinking fix
+          mkdir -p android/build/generated/autolinking
+          npx react-native config > android/build/generated/autolinking/autolinking.json
+      
+          # 🔥 FIX: Run only Android codegen to avoid CI crash
+          npx react-native codegen --platform android
+          echo "Android Codegen Completed ✔️"
+          head -n 30 android/build/generated/autolinking/autolinking.json
+
+
+      # ---------------------------
+      # BUILD RELEASE APK
+      # ---------------------------
+      - name: Build Android Release APK
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          PATH: ${{ env.PATH }}:${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:${{ env.ANDROID_SDK_ROOT }}/build-tools/35.0.0
+        run: |
+          cd RoomAllotment/android
+          echo "🧹 Cleaning..."
+          ./gradlew clean --no-daemon --stacktrace --info
+          
+          echo "🚀 Building Release APK..."
+          ./gradlew assembleRelease --no-daemon --stacktrace --info
+
+      # ---------------------------
+      # UPLOAD ARTIFACT
+      # ---------------------------
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: RoomAllotment/android/app/build/outputs/apk/release/app-release.apk
